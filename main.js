@@ -114,67 +114,78 @@ function drag(ev) {
     ev.dataTransfer.setData("application/json", legalSquaresJson);
   }
 }
+
 function drop(ev) {
   ev.preventDefault();
+
+  // Récupération des données du drag and drop
   let data = ev.dataTransfer.getData("text");
   let [pieceId, startingSquareId] = data.split("|");
+
+  // Récupération des cases légales depuis JSON
   let legalSquaresJson = ev.dataTransfer.getData("application/json");
-  let legalSquares = JSON.parse(legalSquaresJson);
+
+  // Vérifie que les données JSON ne sont pas vides ou invalides
+  if (legalSquaresJson) {
+    try {
+      var legalSquares = JSON.parse(legalSquaresJson);
+    } catch (error) {
+      console.error("Erreur lors du parsing JSON : ", error);
+      return; // Arrête la fonction en cas d'erreur de parsing
+    }
+  } else {
+    console.error("Les données JSON sont vides ou mal formatées.");
+    return; // Arrête la fonction si les données sont vides
+  }
 
   const piece = document.getElementById(pieceId);
   const pieceColor = piece.getAttribute("color");
   const pieceType = piece.classList[1];
-  
+
   const destinationSquare = ev.currentTarget;
-  let   destinationSquareId = destinationSquare.id;
+  let destinationSquareId = destinationSquare.id;
 
-  legalSquares=isMoveValidAgainstCheck(legalSquares,startingSquareId,pieceColor,pieceType);
+  // Valide les mouvements légaux contre le roi en échec
+  legalSquares = isMoveValidAgainstCheck(legalSquares, startingSquareId, pieceColor, pieceType);
 
+  // Si la pièce est un roi, vérifie si elle se mettrait en échec
   if (pieceType == "king") {
     let isCheck = isKingInCheck(
       destinationSquareId,
       pieceColor,
       boardSquaresArray
     );
-    if (isCheck) return;
-    isWhiteTurn  ? (whiteKingSquare=destinationSquareId) : (blackKingSquare=destinationSquareId);
+    if (isCheck) return; // Annule le mouvement si le roi est en échec
+    isWhiteTurn ? (whiteKingSquare = destinationSquareId) : (blackKingSquare = destinationSquareId);
   }
 
-    let squareContent=getPieceAtSquare(destinationSquareId,boardSquaresArray);
+  // Vérification du contenu de la case de destination
+  let squareContent = getPieceAtSquare(destinationSquareId, boardSquaresArray);
   if (
-     squareContent.pieceColor == "blank" &&
-     legalSquares.includes(destinationSquareId)
+    squareContent.pieceColor == "blank" && // Case vide
+    legalSquares.includes(destinationSquareId) // Mouvement légal
   ) {
     destinationSquare.appendChild(piece);
-    isWhiteTurn = !isWhiteTurn;
-    updateBoardSquaresArray(
-      startingSquareId,
-      destinationSquareId,
-      boardSquaresArray
-    );
+    isWhiteTurn = !isWhiteTurn; // Change le tour
+    updateBoardSquaresArray(startingSquareId, destinationSquareId, boardSquaresArray);
     checkForCheckMate();
     return;
   }
+
+  // Capture d'une pièce adverse
   if (
-     squareContent.pieceColor!= "blank" &&
-     legalSquares.includes(destinationSquareId)
+    squareContent.pieceColor != "blank" && // Case occupée par une pièce
+    legalSquares.includes(destinationSquareId) // Mouvement légal
   ) {
     let children = destinationSquare.children;
     for (let i = 0; i < children.length; i++) {
-        if (!children[i].classList.contains('coordinate')) {
-          destinationSquare.removeChild(children[i]);
-        }
+      if (!children[i].classList.contains('coordinate')) {
+        destinationSquare.removeChild(children[i]); // Retire la pièce capturée
+      }
     }
-    // while (destinationSquare.firstChild) {
-    //   destinationSquare.removeChild(destinationSquare.firstChild);
-    // }
-    destinationSquare.appendChild(piece);
-    isWhiteTurn = !isWhiteTurn;
-    updateBoardSquaresArray(
-      startingSquareId,
-      destinationSquareId,
-      boardSquaresArray
-    );
+    destinationSquare.appendChild(piece); // Place la pièce déplacée
+    isWhiteTurn = !isWhiteTurn; // Change le tour
+    updateBoardSquaresArray(startingSquareId, destinationSquareId, boardSquaresArray);
     checkForCheckMate();
     return;
   }
